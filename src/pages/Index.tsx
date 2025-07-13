@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -10,6 +10,33 @@ const Index = () => {
   const [selectedMission, setSelectedMission] = useState<string | null>(null);
   const [selectedArea, setSelectedArea] = useState<string | null>(null);
   const [gameStarted, setGameStarted] = useState(false);
+
+  // Игровые состояния
+  const [dronePosition, setDronePosition] = useState({
+    x: 50,
+    y: 50,
+    rotation: 0,
+  });
+  const [speed, setSpeed] = useState(0);
+  const [altitude, setAltitude] = useState(150);
+  const [ammo, setAmmo] = useState(100);
+  const [targets, setTargets] = useState([
+    { id: 1, x: 20, y: 30, destroyed: false },
+    { id: 2, x: 70, y: 20, destroyed: false },
+    { id: 3, x: 40, y: 80, destroyed: false },
+    { id: 4, x: 80, y: 70, destroyed: false },
+  ]);
+  const [explosions, setExplosions] = useState<
+    { id: number; x: number; y: number }[]
+  >([]);
+  const [score, setScore] = useState(0);
+  const [keys, setKeys] = useState({
+    w: false,
+    s: false,
+    a: false,
+    d: false,
+    space: false,
+  });
 
   const gameModes = [
     {
@@ -104,72 +131,316 @@ const Index = () => {
     }
   };
 
+  // Управление клавишами
+  const handleKeyDown = useCallback((event: KeyboardEvent) => {
+    const key = event.key.toLowerCase();
+    if (["w", "s", "a", "d"].includes(key)) {
+      setKeys((prev) => ({ ...prev, [key]: true }));
+    }
+    if (key === " ") {
+      event.preventDefault();
+      setKeys((prev) => ({ ...prev, space: true }));
+      shoot();
+    }
+    if (key === "escape") {
+      setGameStarted(false);
+    }
+  }, []);
+
+  const handleKeyUp = useCallback((event: KeyboardEvent) => {
+    const key = event.key.toLowerCase();
+    if (["w", "s", "a", "d"].includes(key)) {
+      setKeys((prev) => ({ ...prev, [key]: false }));
+    }
+    if (key === " ") {
+      setKeys((prev) => ({ ...prev, space: false }));
+    }
+  }, []);
+
+  // Движение дрона
+  useEffect(() => {
+    if (!gameStarted) return;
+
+    const interval = setInterval(() => {
+      setDronePosition((prev) => {
+        let newX = prev.x;
+        let newY = prev.y;
+        let newRotation = prev.rotation;
+        let newSpeed = 0;
+
+        if (keys.w) {
+          newY = Math.max(0, newY - 1);
+          newSpeed = 85;
+        }
+        if (keys.s) {
+          newY = Math.min(100, newY + 1);
+          newSpeed = 85;
+        }
+        if (keys.a) {
+          newX = Math.max(0, newX - 1);
+          newRotation -= 2;
+          newSpeed = 65;
+        }
+        if (keys.d) {
+          newX = Math.min(100, newX + 1);
+          newRotation += 2;
+          newSpeed = 65;
+        }
+
+        setSpeed(newSpeed);
+        return { x: newX, y: newY, rotation: newRotation };
+      });
+    }, 50);
+
+    return () => clearInterval(interval);
+  }, [keys, gameStarted]);
+
+  // Управление событиями клавиатуры
+  useEffect(() => {
+    if (gameStarted) {
+      window.addEventListener("keydown", handleKeyDown);
+      window.addEventListener("keyup", handleKeyUp);
+      return () => {
+        window.removeEventListener("keydown", handleKeyDown);
+        window.removeEventListener("keyup", handleKeyUp);
+      };
+    }
+  }, [gameStarted, handleKeyDown, handleKeyUp]);
+
+  // Функция стрельбы
+  const shoot = () => {
+    if (ammo <= 0) return;
+
+    setAmmo((prev) => Math.max(0, prev - 10));
+
+    // Проверка попадания по целям
+    targets.forEach((target) => {
+      if (!target.destroyed) {
+        const distance = Math.sqrt(
+          Math.pow(dronePosition.x - target.x, 2) +
+            Math.pow(dronePosition.y - target.y, 2),
+        );
+
+        if (distance < 15) {
+          setTargets((prev) =>
+            prev.map((t) =>
+              t.id === target.id ? { ...t, destroyed: true } : t,
+            ),
+          );
+          setScore((prev) => prev + 100);
+
+          // Добавить взрыв
+          const explosionId = Date.now();
+          setExplosions((prev) => [
+            ...prev,
+            { id: explosionId, x: target.x, y: target.y },
+          ]);
+          setTimeout(() => {
+            setExplosions((prev) =>
+              prev.filter((exp) => exp.id !== explosionId),
+            );
+          }, 1000);
+        }
+      }
+    });
+  };
+
   const startMission = (missionName: string) => {
     setSelectedMission(missionName);
     setGameStarted(true);
-    // Симуляция запуска игры
-    alert(
-      `🚁 Запуск миссии: ${missionName}!\n\nИспользуйте стрелки для управления дроном.\nПробел - стрельба\nESC - пауза\n\nУдачи в бою, пилот! 🎮`,
-    );
+    // Сброс игрового состояния
+    setDronePosition({ x: 50, y: 50, rotation: 0 });
+    setSpeed(0);
+    setAltitude(150);
+    setAmmo(100);
+    setScore(0);
+    setTargets([
+      { id: 1, x: 20, y: 30, destroyed: false },
+      { id: 2, x: 70, y: 20, destroyed: false },
+      { id: 3, x: 40, y: 80, destroyed: false },
+      { id: 4, x: 80, y: 70, destroyed: false },
+    ]);
   };
 
   const startFreefly = (areaName: string) => {
     setSelectedArea(areaName);
     setGameStarted(true);
-    // Симуляция запуска игры
-    alert(
-      `🚁 Запуск свободного полета в зоне: ${areaName}!\n\nИспользуйте стрелки для управления дроном.\nПробел - стрельба\nESC - пауза\n\nИсследуйте территорию! 🎮`,
-    );
+    // Сброс игрового состояния
+    setDronePosition({ x: 50, y: 50, rotation: 0 });
+    setSpeed(0);
+    setAltitude(150);
+    setAmmo(100);
+    setScore(0);
+    setTargets([
+      { id: 1, x: 30, y: 40, destroyed: false },
+      { id: 2, x: 60, y: 30, destroyed: false },
+    ]);
   };
 
   if (gameStarted) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-slate-800 text-white font-['Orbitron'] flex items-center justify-center">
-        <div className="text-center">
-          <div className="mb-8">
-            <h1 className="text-6xl font-bold mb-4 bg-gradient-to-r from-orange-400 via-red-500 to-pink-500 bg-clip-text text-transparent animate-pulse">
-              ИГРА ЗАПУЩЕНА
-            </h1>
-            <div className="text-2xl text-cyan-400 mb-4">
-              {selectedMission
-                ? `Миссия: ${selectedMission}`
-                : `Зона: ${selectedArea}`}
-            </div>
-            <div className="text-lg text-gray-300 mb-8">
-              Имитация игрового процесса...
-            </div>
-          </div>
-
-          <div className="grid grid-cols-3 gap-4 mb-8 max-w-md mx-auto">
-            <div className="bg-slate-800 p-4 rounded">
-              <div className="text-orange-400 font-bold">СКОРОСТЬ</div>
-              <div className="text-2xl">95 км/ч</div>
-            </div>
-            <div className="bg-slate-800 p-4 rounded">
-              <div className="text-green-400 font-bold">ВЫСОТА</div>
-              <div className="text-2xl">150 м</div>
-            </div>
-            <div className="bg-slate-800 p-4 rounded">
-              <div className="text-red-400 font-bold">БОЕЗАПАС</div>
-              <div className="text-2xl">100%</div>
+      <div className="h-screen w-full bg-black text-white font-['Orbitron'] relative overflow-hidden">
+        {/* Игровая область */}
+        <div
+          className="w-full h-full bg-cover bg-center relative"
+          style={{
+            backgroundImage:
+              "url(/img/25999155-81ec-495e-ab17-cfc22eae044b.jpg)",
+          }}
+        >
+          {/* Прицел */}
+          <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-20">
+            <div className="w-12 h-12 border-2 border-orange-400 rounded-full relative">
+              <div className="absolute top-1/2 left-1/2 w-1 h-1 bg-orange-400 rounded-full transform -translate-x-1/2 -translate-y-1/2"></div>
+              <div className="absolute top-0 left-1/2 w-0.5 h-4 bg-orange-400 transform -translate-x-1/2"></div>
+              <div className="absolute bottom-0 left-1/2 w-0.5 h-4 bg-orange-400 transform -translate-x-1/2"></div>
+              <div className="absolute left-0 top-1/2 h-0.5 w-4 bg-orange-400 transform -translate-y-1/2"></div>
+              <div className="absolute right-0 top-1/2 h-0.5 w-4 bg-orange-400 transform -translate-y-1/2"></div>
             </div>
           </div>
 
-          <Button
-            size="lg"
-            variant="outline"
-            className="border-gray-500 text-gray-400 hover:bg-gray-800 font-bold px-8 py-4 text-xl"
-            onClick={() => {
-              setGameStarted(false);
-              setSelectedMission(null);
-              setSelectedArea(null);
-              setSelectedMode(null);
-            }}
-          >
-            <Icon name="ArrowLeft" className="mr-3" size={24} />
-            ВЕРНУТЬСЯ В МЕНЮ
-          </Button>
+          {/* Карта (вид сверху) */}
+          <div className="absolute bottom-4 right-4 w-48 h-48 bg-black/70 border border-cyan-400 rounded-lg p-2">
+            <div className="text-xs text-cyan-400 mb-1 text-center">КАРТА</div>
+            <div className="relative w-full h-full bg-slate-800/50 rounded">
+              {/* Дрон на карте */}
+              <div
+                className="absolute w-2 h-2 bg-orange-400 rounded-full transform -translate-x-1/2 -translate-y-1/2 transition-all duration-100"
+                style={{
+                  left: `${dronePosition.x}%`,
+                  top: `${dronePosition.y}%`,
+                  transform: `translate(-50%, -50%) rotate(${dronePosition.rotation}deg)`,
+                }}
+              >
+                <div className="absolute top-0 left-1/2 w-0.5 h-1 bg-orange-400 transform -translate-x-1/2 -translate-y-full"></div>
+              </div>
+
+              {/* Цели на карте */}
+              {targets.map(
+                (target) =>
+                  !target.destroyed && (
+                    <div
+                      key={target.id}
+                      className="absolute w-1.5 h-1.5 bg-red-400 rounded-full transform -translate-x-1/2 -translate-y-1/2 animate-pulse"
+                      style={{
+                        left: `${target.x}%`,
+                        top: `${target.y}%`,
+                      }}
+                    ></div>
+                  ),
+              )}
+
+              {/* Взрывы на карте */}
+              {explosions.map((explosion) => (
+                <div
+                  key={explosion.id}
+                  className="absolute w-3 h-3 bg-yellow-400 rounded-full transform -translate-x-1/2 -translate-y-1/2 animate-ping"
+                  style={{
+                    left: `${explosion.x}%`,
+                    top: `${explosion.y}%`,
+                  }}
+                ></div>
+              ))}
+            </div>
+          </div>
+
+          {/* HUD - левая панель */}
+          <div className="absolute top-4 left-4 space-y-4">
+            <div className="bg-black/70 border border-orange-400 rounded-lg p-3 min-w-48">
+              <div className="text-orange-400 text-sm font-bold mb-2">
+                СТАТУС ДРОНА
+              </div>
+              <div className="space-y-2">
+                <div className="flex justify-between">
+                  <span className="text-xs text-gray-300">Скорость:</span>
+                  <span className="text-orange-400 font-bold">
+                    {speed} км/ч
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-xs text-gray-300">Высота:</span>
+                  <span className="text-green-400 font-bold">{altitude} м</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-xs text-gray-300">Боезапас:</span>
+                  <span className="text-red-400 font-bold">{ammo}%</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-black/70 border border-cyan-400 rounded-lg p-3">
+              <div className="text-cyan-400 text-sm font-bold mb-2">МИССИЯ</div>
+              <div className="text-xs text-gray-300">
+                {selectedMission ? selectedMission : selectedArea}
+              </div>
+              <div className="text-orange-400 text-lg font-bold mt-2">
+                СЧЕТ: {score}
+              </div>
+            </div>
+          </div>
+
+          {/* HUD - верхняя панель */}
+          <div className="absolute top-4 left-1/2 transform -translate-x-1/2">
+            <div className="bg-black/70 border border-green-400 rounded-lg px-6 py-2">
+              <div className="text-green-400 text-sm font-bold">
+                ЦЕЛИ: {targets.filter((t) => !t.destroyed).length} /{" "}
+                {targets.length}
+              </div>
+            </div>
+          </div>
+
+          {/* Управление */}
+          <div className="absolute bottom-4 left-4">
+            <div className="bg-black/70 border border-gray-500 rounded-lg p-3 text-xs text-gray-300">
+              <div className="mb-1">
+                <strong>WASD</strong> - движение
+              </div>
+              <div className="mb-1">
+                <strong>SPACE</strong> - стрельба
+              </div>
+              <div>
+                <strong>ESC</strong> - выход
+              </div>
+            </div>
+          </div>
+
+          {/* Индикатор попадания */}
+          {keys.space && (
+            <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-30">
+              <div className="w-16 h-16 border-4 border-red-400 rounded-full animate-ping"></div>
+            </div>
+          )}
+
+          {/* Взрывы на экране */}
+          {explosions.map((explosion) => (
+            <div
+              key={explosion.id}
+              className="absolute z-25 pointer-events-none"
+              style={{
+                left: `${explosion.x}%`,
+                top: `${explosion.y}%`,
+                transform: "translate(-50%, -50%)",
+              }}
+            >
+              <div className="w-20 h-20 bg-gradient-radial from-yellow-400 via-orange-500 to-red-600 rounded-full animate-ping opacity-80"></div>
+              <div className="absolute top-1/2 left-1/2 w-12 h-12 bg-gradient-radial from-white via-yellow-400 to-orange-500 rounded-full transform -translate-x-1/2 -translate-y-1/2 animate-pulse"></div>
+            </div>
+          ))}
         </div>
+
+        {/* Кнопка выхода */}
+        <Button
+          className="absolute top-4 right-4 bg-red-600 hover:bg-red-700 border border-red-500"
+          onClick={() => {
+            setGameStarted(false);
+            setSelectedMission(null);
+            setSelectedArea(null);
+            setSelectedMode(null);
+          }}
+        >
+          <Icon name="X" size={16} className="mr-2" />
+          ВЫХОД
+        </Button>
       </div>
     );
   }
