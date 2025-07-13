@@ -129,7 +129,13 @@ const Index = () => {
             <Button
               size="lg"
               className="bg-gradient-to-r from-orange-500 to-red-600 hover:from-orange-600 hover:to-red-700 text-white font-bold px-8 py-4 text-lg transform hover:scale-105 transition-all"
-              onClick={() => setSelectedMode("missions")}
+              onClick={() => {
+                setSelectedMode("missions");
+                setTimeout(() => {
+                  const element = document.getElementById("game-mode-section");
+                  element?.scrollIntoView({ behavior: "smooth" });
+                }, 100);
+              }}
             >
               <Icon name="Target" className="mr-2" size={24} />
               МИССИИ
@@ -138,7 +144,13 @@ const Index = () => {
               size="lg"
               variant="outline"
               className="border-cyan-400 text-cyan-400 hover:bg-cyan-400 hover:text-black font-bold px-8 py-4 text-lg transform hover:scale-105 transition-all"
-              onClick={() => setSelectedMode("freefly")}
+              onClick={() => {
+                setSelectedMode("freefly");
+                setTimeout(() => {
+                  const element = document.getElementById("game-mode-section");
+                  element?.scrollIntoView({ behavior: "smooth" });
+                }, 100);
+              }}
             >
               <Icon name="Plane" className="mr-2" size={24} />
               СВОБОДНЫЙ ПОЛЕТ
@@ -149,7 +161,7 @@ const Index = () => {
 
       {/* Game Mode Selection */}
       {selectedMode && (
-        <div className="container mx-auto px-4 py-16">
+        <div id="game-mode-section" className="container mx-auto px-4 py-16">
           <div className="text-center mb-12">
             <h2 className="text-4xl font-bold mb-4 text-cyan-400">
               {selectedMode === "missions" ? "ВЫБЕРИ МИССИЮ" : "ВЫБЕРИ ЗОНУ"}
