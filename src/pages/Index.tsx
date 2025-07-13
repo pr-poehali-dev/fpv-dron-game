@@ -7,6 +7,9 @@ import Icon from "@/components/ui/icon";
 const Index = () => {
   const [selectedMode, setSelectedMode] = useState<string | null>(null);
   const [selectedDrone, setSelectedDrone] = useState<string | null>(null);
+  const [selectedMission, setSelectedMission] = useState<string | null>(null);
+  const [selectedArea, setSelectedArea] = useState<string | null>(null);
+  const [gameStarted, setGameStarted] = useState(false);
 
   const gameModes = [
     {
@@ -100,6 +103,76 @@ const Index = () => {
         return "bg-gray-500";
     }
   };
+
+  const startMission = (missionName: string) => {
+    setSelectedMission(missionName);
+    setGameStarted(true);
+    // Симуляция запуска игры
+    alert(
+      `🚁 Запуск миссии: ${missionName}!\n\nИспользуйте стрелки для управления дроном.\nПробел - стрельба\nESC - пауза\n\nУдачи в бою, пилот! 🎮`,
+    );
+  };
+
+  const startFreefly = (areaName: string) => {
+    setSelectedArea(areaName);
+    setGameStarted(true);
+    // Симуляция запуска игры
+    alert(
+      `🚁 Запуск свободного полета в зоне: ${areaName}!\n\nИспользуйте стрелки для управления дроном.\nПробел - стрельба\nESC - пауза\n\nИсследуйте территорию! 🎮`,
+    );
+  };
+
+  if (gameStarted) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-slate-800 text-white font-['Orbitron'] flex items-center justify-center">
+        <div className="text-center">
+          <div className="mb-8">
+            <h1 className="text-6xl font-bold mb-4 bg-gradient-to-r from-orange-400 via-red-500 to-pink-500 bg-clip-text text-transparent animate-pulse">
+              ИГРА ЗАПУЩЕНА
+            </h1>
+            <div className="text-2xl text-cyan-400 mb-4">
+              {selectedMission
+                ? `Миссия: ${selectedMission}`
+                : `Зона: ${selectedArea}`}
+            </div>
+            <div className="text-lg text-gray-300 mb-8">
+              Имитация игрового процесса...
+            </div>
+          </div>
+
+          <div className="grid grid-cols-3 gap-4 mb-8 max-w-md mx-auto">
+            <div className="bg-slate-800 p-4 rounded">
+              <div className="text-orange-400 font-bold">СКОРОСТЬ</div>
+              <div className="text-2xl">95 км/ч</div>
+            </div>
+            <div className="bg-slate-800 p-4 rounded">
+              <div className="text-green-400 font-bold">ВЫСОТА</div>
+              <div className="text-2xl">150 м</div>
+            </div>
+            <div className="bg-slate-800 p-4 rounded">
+              <div className="text-red-400 font-bold">БОЕЗАПАС</div>
+              <div className="text-2xl">100%</div>
+            </div>
+          </div>
+
+          <Button
+            size="lg"
+            variant="outline"
+            className="border-gray-500 text-gray-400 hover:bg-gray-800 font-bold px-8 py-4 text-xl"
+            onClick={() => {
+              setGameStarted(false);
+              setSelectedMission(null);
+              setSelectedArea(null);
+              setSelectedMode(null);
+            }}
+          >
+            <Icon name="ArrowLeft" className="mr-3" size={24} />
+            ВЕРНУТЬСЯ В МЕНЮ
+          </Button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-slate-800 text-white font-['Orbitron']">
@@ -203,7 +276,10 @@ const Index = () => {
                         <div className="text-sm text-gray-300">
                           <strong>Цели:</strong> {mission.targets}
                         </div>
-                        <Button className="w-full bg-orange-500 hover:bg-orange-600">
+                        <Button
+                          className="w-full bg-orange-500 hover:bg-orange-600"
+                          onClick={() => startMission(mission.name)}
+                        >
                           ВЫБРАТЬ
                         </Button>
                       </div>
@@ -236,7 +312,10 @@ const Index = () => {
                             {area.enemies}
                           </Badge>
                         </div>
-                        <Button className="w-full bg-cyan-500 hover:bg-cyan-600">
+                        <Button
+                          className="w-full bg-cyan-500 hover:bg-cyan-600"
+                          onClick={() => startFreefly(area.name)}
+                        >
                           ЛЕТЕТЬ
                         </Button>
                       </div>
