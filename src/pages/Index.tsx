@@ -169,28 +169,28 @@ const Index = () => {
         let newSpeed = 0;
 
         if (keys.w) {
-          newY = Math.max(0, newY - 1);
-          newSpeed = 85;
+          newY = Math.max(0, newY - 1.5);
+          newSpeed = 95;
         }
         if (keys.s) {
           newY = Math.min(100, newY + 1);
-          newSpeed = 85;
+          newSpeed = 65;
         }
         if (keys.a) {
-          newX = Math.max(0, newX - 1);
-          newRotation -= 2;
-          newSpeed = 65;
+          newX = Math.max(0, newX - 1.2);
+          newRotation -= 3;
+          newSpeed = 75;
         }
         if (keys.d) {
-          newX = Math.min(100, newX + 1);
-          newRotation += 2;
-          newSpeed = 65;
+          newX = Math.min(100, newX + 1.2);
+          newRotation += 3;
+          newSpeed = 75;
         }
 
         setSpeed(newSpeed);
         return { x: newX, y: newY, rotation: newRotation };
       });
-    }, 50);
+    }, 30);
 
     return () => clearInterval(interval);
   }, [keys, gameStarted]);
@@ -280,23 +280,82 @@ const Index = () => {
   if (gameStarted) {
     return (
       <div className="h-screen w-full bg-black text-white font-['Orbitron'] relative overflow-hidden">
-        {/* Игровая область */}
-        <div
-          className="w-full h-full bg-cover bg-center relative"
-          style={{
-            backgroundImage:
-              "url(/img/25999155-81ec-495e-ab17-cfc22eae044b.jpg)",
-          }}
-        >
-          {/* Прицел */}
-          <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-20">
+        {/* Игровая область с многослойным фоном */}
+        <div className="w-full h-full relative overflow-hidden">
+          {/* Дальний фон - небо */}
+          <div
+            className="absolute inset-0 bg-cover bg-center transition-transform duration-200"
+            style={{
+              backgroundImage:
+                "url(/img/6e5e4c31-68b5-4911-8a67-bbf7d64ba2b9.jpg)",
+              transform: `translate(${-dronePosition.x * 0.1}px, ${-dronePosition.y * 0.1}px) rotate(${dronePosition.rotation * 0.05}deg) scale(${1 + speed * 0.002})`,
+            }}
+          ></div>
+
+          {/* Средний слой - облака */}
+          <div
+            className="absolute inset-0 opacity-30"
+            style={{
+              background:
+                "radial-gradient(circle at 30% 20%, rgba(255,255,255,0.3) 0%, transparent 40%), radial-gradient(circle at 70% 60%, rgba(255,255,255,0.2) 0%, transparent 30%)",
+              transform: `translate(${-dronePosition.x * 0.3}px, ${-dronePosition.y * 0.2}px)`,
+            }}
+          ></div>
+
+          {/* Ближний слой - местность */}
+          <div
+            className="absolute inset-0 opacity-80"
+            style={{
+              backgroundImage:
+                "url(/img/25999155-81ec-495e-ab17-cfc22eae044b.jpg)",
+              backgroundSize: "150% 150%",
+              backgroundPosition: "center",
+              transform: `translate(${-dronePosition.x * 0.8}px, ${-dronePosition.y * 0.8}px) rotate(${dronePosition.rotation * 0.1}deg) scale(${1 + speed * 0.005})`,
+            }}
+          ></div>
+
+          {/* Эффект движения */}
+          {speed > 0 && (
+            <div className="absolute inset-0 pointer-events-none">
+              {[...Array(20)].map((_, i) => (
+                <div
+                  key={i}
+                  className="absolute w-1 h-1 bg-white/30 rounded-full animate-pulse"
+                  style={{
+                    left: `${Math.random() * 100}%`,
+                    top: `${Math.random() * 100}%`,
+                    animationDelay: `${Math.random() * 2}s`,
+                    transform: `translateX(${speed * 2}px)`,
+                  }}
+                ></div>
+              ))}
+            </div>
+          )}
+          {/* Прицел с реакцией на движение */}
+          <div
+            className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-20 transition-transform duration-200"
+            style={{
+              transform: `translate(-50%, -50%) rotate(${dronePosition.rotation * 0.2}deg) scale(${1 + speed * 0.01})`,
+            }}
+          >
             <div className="w-12 h-12 border-2 border-orange-400 rounded-full relative">
               <div className="absolute top-1/2 left-1/2 w-1 h-1 bg-orange-400 rounded-full transform -translate-x-1/2 -translate-y-1/2"></div>
               <div className="absolute top-0 left-1/2 w-0.5 h-4 bg-orange-400 transform -translate-x-1/2"></div>
               <div className="absolute bottom-0 left-1/2 w-0.5 h-4 bg-orange-400 transform -translate-x-1/2"></div>
               <div className="absolute left-0 top-1/2 h-0.5 w-4 bg-orange-400 transform -translate-y-1/2"></div>
               <div className="absolute right-0 top-1/2 h-0.5 w-4 bg-orange-400 transform -translate-y-1/2"></div>
+
+              {/* Дополнительные кольца прицела */}
+              <div className="absolute inset-0 border border-orange-300/50 rounded-full scale-150"></div>
+              <div className="absolute inset-0 border border-orange-200/30 rounded-full scale-200"></div>
             </div>
+
+            {/* Индикатор скорости на прицеле */}
+            {speed > 0 && (
+              <div className="absolute -bottom-8 left-1/2 transform -translate-x-1/2 text-orange-400 text-xs font-bold">
+                {speed} км/ч
+              </div>
+            )}
           </div>
 
           {/* Карта (вид сверху) */}
